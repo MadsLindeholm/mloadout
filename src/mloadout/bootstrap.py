@@ -1,19 +1,14 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.12"
-# dependencies = ["pyyaml>=6"]
-# ///
 """
 Link pinned third-party Agent Skills into the shared skills directory (ADR 0002)
 
-Reads one or more sources.yaml files, fetches each source at its pinned `stable`
-commit into a cache outside the repo, and symlinks the selected skill folders
-into ~/.agents/skills (or the given targets). Every check runs before any link
-changes, so a failing run leaves the targets as they were.
+Reads a base sources.yaml plus any overlay files, fetches each source at its
+pinned `stable` commit into a cache outside the repo, and symlinks the selected
+skill folders into ~/.agents/skills (or the given targets). Every check runs
+before any link changes, so a failing run leaves the targets as they were.
 
-    uv run bootstrap.py                      # link into ~/.agents/skills
-    uv run bootstrap.py --dry-run            # fetch and check, change no links
-    uv run bootstrap.py --sources skills/sources.yaml --sources ../overlay/sources.yaml
+    mloadout bootstrap                                  # link into ~/.agents/skills
+    mloadout bootstrap --dry-run                        # fetch and check, change no links
+    mloadout bootstrap --overlay ../overlay/sources.yaml
 """
 
 from __future__ import annotations
@@ -26,12 +21,11 @@ import stat
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from importlib.resources import files
 from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent
-DEFAULT_SOURCES = REPO_ROOT / "skills" / "sources.yaml"
 DEFAULT_TARGET = Path.home() / ".agents" / "skills"
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SKILL_FILE = "SKILL.md"
@@ -750,35 +744,59 @@ def print_plan(
 # --------------------------------------------------------------------------- main
 
 
-def parse_args(argv: list[str] | None) -> argparse.Namespace:
+def default_base_sources() -> Path:
     """
-    Parse the command line
-
-    **Args**:
-        **argv** (*list[str] | None*): arguments, or None to read sys.argv
+    Find the base sources.yaml that ships with mloadout
 
     **Returns**:
-        The parsed options
+        The bundled copy in an installed wheel, or the repo's skills/sources.yaml
+        when running from a source checkout
 
     **Examples**:
-        >>> parse_args(argv=["--dry-run", "--target", "~/.claude/skills"])
-        `--sources` and `--target` can be repeated; each defaults to this repo's
-        sources.yaml and ~/.agents/skills when not given.
+        >>> default_base_sources()
+        After `uv tool install`, this is `<site-packages>/mloadout/data/sources.yaml`,
+        copied from skills/sources.yaml at build time. In an editable install
+        (`uv run` inside the repo) it is the working copy of skills/sources.yaml.
     """
-    parser = argparse.ArgumentParser(
-        description="Link pinned Agent Skills into the shared skills directory (ADR 0002).",
+    bundled = Path(str(files("mloadout").joinpath("data", "sources.yaml")))
+    if bundled.is_file():
+        return bundled
+    return Path(__file__).resolve().parents[2] / "skills" / "sources.yaml"
+
+
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    """
+    Add the bootstrap command's options to a parser
+
+    **Args**:
+        **parser** (*argparse.ArgumentParser*): the `bootstrap` subcommand's parser
+
+    **Returns**:
+        Nothing
+
+    **Examples**:
+        >>> add_arguments(parser=subparsers.add_parser("bootstrap"))
+        `--overlay` and `--target` can be repeated. `--base` replaces the bundled
+        sources.yaml, which is mainly useful for testing a changed copy.
+    """
+    parser.add_argument(
+        "--base",
+        type=lambda value: Path(value).expanduser(),
+        default=None,
+        help="the base sources.yaml (default: the copy bundled with mloadout)",
     )
     parser.add_argument(
-        "--sources",
+        "--overlay",
         action="append",
-        type=Path,
-        help=f"a sources.yaml file; repeat for overlays (default: {DEFAULT_SOURCES})",
+        default=[],
+        type=lambda value: Path(value).expanduser(),
+        help="an overlay sources.yaml whose sources are added to the base; repeatable",
     )
     parser.add_argument(
         "--target",
         action="append",
         type=lambda value: Path(value).expanduser(),
-        help=f"directory to link skills into; repeat for fallbacks (default: {DEFAULT_TARGET})",
+        help=f"directory to link skills into; repeatable (default: {DEFAULT_TARGET})",
     )
     parser.add_argument(
         "--cache-dir",
@@ -791,28 +809,25 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="fetch and check everything, but change no links",
     )
-    return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
+def run(args: argparse.Namespace) -> int:
     """
     Run the bootstrap end to end
 
     **Args**:
-        **argv** (*list[str] | None*): command-line arguments, or None to read sys.argv
+        **args** (*argparse.Namespace*): options parsed with add_arguments
 
     **Returns**:
         The process exit code: 0 on success, 1 when a check fails
 
     **Examples**:
-        >>> main(argv=["--dry-run"])
+        >>> run(args=parser.parse_args(["bootstrap", "--dry-run"]))
         Load and validate config, fetch sources, select skills, resolve collisions,
         plan every target, and only then change links.
     """
-    args = parse_args(argv=argv)
-    sources_files = args.sources or [DEFAULT_SOURCES]
+    sources_files = [args.base or default_base_sources(), *args.overlay]
     targets = args.target or [DEFAULT_TARGET]
-
     try:
         config = load_config(paths=sources_files)
         active = {
@@ -858,7 +873,3 @@ def main(argv: list[str] | None = None) -> int:
     counts = ", ".join(f"{name} {len(skills)}" for name, skills in selections.items())
     print(f"\n{len(effective)} skills from {len(selections)} sources ({counts})")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

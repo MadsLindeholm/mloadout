@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from conftest import skill_md
 
-from bootstrap import BootstrapError, Source, fetch_source
+from mloadout.bootstrap import BootstrapError, Source, fetch_source
 
 
 def make_source(

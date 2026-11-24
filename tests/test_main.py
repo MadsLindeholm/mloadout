@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from conftest import skill_md, source_entry
 
-from bootstrap import main
+from mloadout.cli import main
 
 
 @pytest.fixture
@@ -81,11 +81,11 @@ def run(
     targets: tuple[str, ...] = ("skills",),
 ) -> int:
     """
-    Run main() with a cache and targets inside the test's temp folder
+    Run `mloadout bootstrap` with a cache and targets inside the test's temp folder
 
     **Args**:
         **tmp_path** (*Path*): the test's temp folder
-        **sources** (*Path*): the sources.yaml to use
+        **sources** (*Path*): the base sources.yaml to use
         **extra_args** (*str*): further command-line arguments, such as --dry-run
         **targets** (*tuple[str, ...]*): target folder names under tmp_path
 
@@ -96,7 +96,8 @@ def run(
         >>> run(tmp_path, sources, "--dry-run")
     """
     argv = [
-        "--sources",
+        "bootstrap",
+        "--base",
         str(sources),
         "--cache-dir",
         str(tmp_path / "cache"),

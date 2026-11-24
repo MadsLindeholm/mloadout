@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from conftest import source_entry
 
-from bootstrap import BootstrapError, load_config
+from mloadout.bootstrap import BootstrapError, load_config
 
 
 def problems_of(error: pytest.ExceptionInfo[BootstrapError]) -> str:
@@ -237,8 +237,8 @@ def test_all_problems_are_reported_together(write_sources) -> None:
 
 def test_repo_sources_file_is_valid() -> None:
     """The sources.yaml committed in this repo passes every config check."""
-    from bootstrap import DEFAULT_SOURCES
+    from mloadout.bootstrap import default_base_sources
 
-    config = load_config(paths=[DEFAULT_SOURCES])
+    config = load_config(paths=[default_base_sources()])
 
     assert config.backbone in config.sources

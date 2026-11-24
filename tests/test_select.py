@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from conftest import skill_md
 
-from bootstrap import (
+from mloadout.bootstrap import (
     BootstrapError,
     Replacement,
     Source,

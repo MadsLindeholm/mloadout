@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from bootstrap import BootstrapError, apply_plan, plan_links
+from mloadout.bootstrap import BootstrapError, apply_plan, plan_links
 
 
 @pytest.fixture
