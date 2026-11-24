@@ -8,7 +8,7 @@
 # replaces: list of {skill: <name>, use: <source>} declaring which source wins a
 #          name collision. Collisions are checked after keep lists are applied.
 #
-# Apply with: uv run bootstrap.py  (see --help)
+# Apply with: mloadout bootstrap  (or `uv run mloadout bootstrap` in a clone; see --help)
 
 backbone: mattpocock
 

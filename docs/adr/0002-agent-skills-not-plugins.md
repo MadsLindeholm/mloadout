@@ -1,7 +1,7 @@
 # 0002: Skills are plain Agent Skills folders, linked into one directory from pinned sources
 
 - **Status:** accepted 2026-11-19. Rollout to work environments waits on the verification items below.
-- **Date:** 2026-11-18, revised 2026-11-19 and 2026-11-24 (bootstrap implementation, `replaces:` format, Databricks licence)
+- **Date:** 2026-11-18, revised 2026-11-19 and 2026-11-24 (bootstrap as a uv tool, `replaces:` format, Databricks licence)
 
 ## Context
 
@@ -42,9 +42,16 @@ Third-party bundles are worth using but churn hard: skills are renamed, removed 
 
 ### Bootstrap
 
-- Bootstrap is one Python script, `bootstrap.py`, run with `uv run bootstrap.py`. Its dependency (PyYAML) is declared inline (PEP 723), so uv installs it and the script runs straight from a clone with no build or release step.
+- Bootstrap is the `bootstrap` subcommand of the `mloadout` Python package, which is installed as a uv tool straight from this public repo, anonymously over HTTPS (ADR 0001):
+  ```
+  uv tool install git+https://github.com/MadsLindeholm/mloadout@<commit>
+  mloadout bootstrap
+  ```
+  Installing from a commit pins the bootstrap code the same way `stable` pins a skill source. There is no build or release step: uv builds the package from the repo during install. Inside a clone, `uv run mloadout bootstrap` runs the working copy.
+- The wheel carries a copy of `skills/sources.yaml`, so an installed tool needs no clone. The file itself stays at `skills/sources.yaml` in the repo, and a change to it reaches a machine when the tool is reinstalled at the new commit.
 - Its interface, which the overlay depends on (ADR 0001):
-  - `--sources <file>`, repeatable. This repo's `skills/sources.yaml` is the default; an overlay passes its own file as a second `--sources`. Source names must be unique across files, and exactly one file declares the backbone.
+  - `--overlay <file>`, repeatable. Each overlay's sources are added to the base. Source names must be unique across files, and exactly one file declares the backbone.
+  - `--base <file>` replaces the bundled `sources.yaml`. It is meant for testing a changed copy, not for overlays.
   - `--target <dir>`, repeatable. `~/.agents/skills/` is the default; fallback targets such as `~/.claude/skills/` are added the same way.
   - `--cache-dir <dir>`. The default is the per-user cache: `$XDG_CACHE_HOME/mloadout/sources` on Linux, `~/Library/Caches/mloadout/sources` on macOS, `%LOCALAPPDATA%\mloadout\cache\sources` on Windows.
   - `--dry-run` fetches and runs every check but changes no links.
@@ -85,7 +92,7 @@ No `replaces:` entries are needed at the start.
 - Pinned sources go stale unless bumped through ADR 0003.
 - Depends on tools continuing to honour the shared path. `~/.claude/skills/` and `~/.copilot/skills/` are the fallback link targets.
 - Every machine that runs bootstrap needs git and uv. uv provides Python 3.12 or later if the machine lacks it.
-- PyYAML is declared twice, in the script header and in `pyproject.toml` (for the tests). The two must be kept in step.
+- An installed tool keeps the `sources.yaml` it was built with. Bumping `stable` in the repo changes nothing on a machine until the tool is reinstalled at the new commit.
 - Bootstrap never deletes old checkouts, so the cache grows with each `stable` bump until it is cleared by hand.
 - Problems are reported in stages: config, then selection, then collisions, then links. Fixing one stage can reveal problems in the next.
 
@@ -96,7 +103,8 @@ No `replaces:` entries are needed at the start.
 - **Tracking upstream live.** Rejected: production behaviour would change without review.
 - **Every source all-on.** Rejected: it pulls in frozen and beta skills, about 58 slash commands and a self-loading router, and it multiplies overlapping triggers.
 - **Project-level skills only (`.agents/skills/` per repo).** Kept open for sharing with a team later. As the only mechanism, personal skills would have to be copied into every repo.
-- **Bootstrap in Go or Rust.** A single binary needs no runtime, but someone has to build it: either every machine needs the toolchain, or CI has to publish a release per OS. That is too much upkeep for a script this size. Go remains the fallback if a target machine can't run uv.
+- **Bootstrap in Go or Rust.** A single binary needs no runtime, but someone has to build it: either every machine needs the toolchain, or CI has to publish a release per OS. That is too much upkeep for a tool this size. Go remains the fallback if a target machine can't run uv.
+- **A standalone `uv run bootstrap.py` script (PEP 723).** This was the first implementation. It runs only from a clone, and its dependencies had to be declared twice, once in the script and once in `pyproject.toml` for the tests. Replaced by the uv tool on 2026-11-24.
 - **Bootstrap in standard-library Python.** Would need only Python 3.11 or later, not uv, but YAML isn't in the standard library, so `sources.yaml` would have to become TOML.
 
 ## To verify before rollout
