@@ -272,3 +272,22 @@ def test_invalid_config_fetches_nothing(
     assert run(tmp_path, write_sources(data)) == 1
 
     assert not (tmp_path / "cache").exists()
+
+
+def test_overlay_adds_its_sources_to_the_base(
+    tmp_path: Path,
+    upstreams,
+    write_sources,
+) -> None:
+    """An overlay file contributes its own sources on top of the base file."""
+    data = config(upstreams=upstreams, extra_keep=["unslop"])
+    base = write_sources(
+        {"backbone": "backbone", "sources": {"backbone": data["sources"]["backbone"]}}
+    )
+    overlay = write_sources(
+        {"sources": {"extra": data["sources"]["extra"]}}, name="overlay.yaml"
+    )
+
+    assert run(tmp_path, base, "--overlay", str(overlay)) == 0
+
+    assert linked(tmp_path / "skills") == {"tdd", "teach", "unslop"}
