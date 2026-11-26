@@ -1,0 +1,36 @@
+
+# <type>(<scope>)!: <subject>
+#
+# <body>
+#
+# BREAKING CHANGE: <what breaks and what to do instead>
+# Co-Authored-By: <name> <email>
+#
+# Lines starting with # are removed. Rules:
+#
+# Subject (first line)
+#   - Conventional Commits. type: feat | fix | docs | test | refactor |
+#     perf | build | ci | chore | revert
+#   - scope is optional: the area touched, e.g. cli, bootstrap, adr,
+#     sources, readme
+#   - "!" after the scope marks a breaking change; add the footer too
+#   - imperative, lower case, no full stop, at most 72 characters
+#     ("add --target fallback", not "Added --target fallback.")
+#
+# Body (optional, after one blank line)
+#   - say why and what changed for the user, not how the diff reads
+#   - wrap at 72 characters; "- " bullets for separate points
+#   - name the ADR when the change follows from one (ADR 0002)
+#
+# Footers (after one blank line)
+#   - BREAKING CHANGE: required whenever the subject has "!"
+#   - Co-Authored-By: for every agent or person who co-wrote the change
+#
+# Example:
+#   feat(cli)!: package mloadout as a uv tool with a bootstrap subcommand
+#
+#   Move bootstrap.py into the src/mloadout package so it can be
+#   installed with `uv tool install` and run without a clone.
+#
+#   BREAKING CHANGE: `uv run bootstrap.py` is removed. Run
+#   `mloadout bootstrap` instead.

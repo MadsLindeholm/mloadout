@@ -1,0 +1,74 @@
+# Third-party skill sources (ADR 0002). Generic sources only.
+#
+# stable:  full 40-character commit SHA, never a tag or branch. TODO values must be
+#          resolved before the first bootstrap.
+# roots:   folders inside the repo to read skills from.
+# keep:    optional; omitted only for the backbone source.
+# hold:    true = listed but not linked until the open item is resolved.
+# replaces: list of {skill: <name>, use: <source>} declaring which source wins a
+#          name collision. Collisions are checked after keep lists are applied.
+#
+# Apply with: mloadout bootstrap  (or `uv run mloadout bootstrap` in a clone; see --help)
+
+backbone: mattpocock
+
+sources:
+  mattpocock:
+    repo: https://github.com/mattpocock/skills
+    stable: 5863806dd4e15c63174bee4e7515a4256792ecfa  # 2026-11-12, after v1.3.2
+    roots: [skills/engineering, skills/productivity]  # never misc/ or in-progress/
+    licence: MIT
+
+  pstack:
+    repo: https://github.com/cursor/plugins  # upstream publisher, not a mirror
+    stable: 2f87c854fe3e2fcda44ca86b46ede35aad3c46b7  # pstack 0.15.43 (2026-11-16); diff only pstack/skills/ on bumps
+    roots: [pstack/skills]
+    keep: [unslop, technical-writing, bro, sharpen, blast-radius, benchmark-checklist]
+    licence: MIT
+
+  superpowers:
+    repo: https://github.com/obra/superpowers
+    stable: 22f0b463e7a5e579904dd6211a520321035526f7  # v7.0.2 (2026-11-03)
+    roots: [skills]
+    keep: [verification-before-completion, receiving-code-review]
+    licence: MIT
+
+  databricks:
+    repo: https://github.com/databricks/databricks-agent-skills
+    stable: 5ecd4e16f9fdaab05f25b1ee8f0364a3623baac4  # v0.2.53 (2026-11-23)
+    roots: [skills]  # source of truth; plugins/databricks/<tool>/skills are generated copies, experimental/ excluded
+    keep:  # all verified to exist at stable
+      - databricks-core
+      - databricks-dabs
+      - databricks-pipelines
+      - databricks-jobs
+      - databricks-unity-catalog
+      - databricks-python-sdk
+      - databricks-spark-structured-streaming
+      - databricks-dbsql
+      - databricks-execution-compute
+      - databricks-docs
+    licence: Databricks-License  # proprietary: use only with Databricks Services; terminable on notice
+    hold: true     # held until the licence terms are accepted
+
+replaces: []  # none needed at start; collisions are checked on the effective set
+
+# Lab only (ADR 0003 challengers). Never linked into ~/.agents/skills.
+lab:
+  superpowers:
+    keep: [systematic-debugging, requesting-code-review]
+  awesome-copilot:
+    repo: https://github.com/github/awesome-copilot
+    stable: f10fdb8b2660ce85c98f220b2f1ca24653768a5c  # main, 2026-11-20 (no release tags)
+    roots: [skills]
+    keep: [azure-devops-cli]
+    licence: MIT
+  trailofbits:
+    repo: https://github.com/trailofbits/skills
+    stable: 149d7b21f4067765b82e67029730b42d228ef4b4  # main, 2026-11-12 (no release tags)
+    roots:  # packaged as plugins; skill folders sit inside each plugin
+      - plugins/modern-python/skills
+      - plugins/differential-review/skills
+      - plugins/supply-chain-risk-auditor/skills
+    keep: [modern-python, differential-review, supply-chain-risk-auditor]
+    licence: CC-BY-SA-4.0  # never commit modified copies to this public repo
